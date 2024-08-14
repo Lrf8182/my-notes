@@ -25,6 +25,34 @@ class SimpleModel1(nn.Module):
         x = self.fc(x)
         # x: (batch_size, 2)
         return x
+    
+class SimpleModel4(nn.Module):
+    def __init__(self, n_seq: int, seq_len:int, hidden_dim: int):   #（128，2，16）
+        super(SimpleModel4, self).__init__()
+        self.lstm=LSTM(input_dim=seq_len, hidden_dim=hidden_dim).to('cuda:0')
+        #self.lstm=self.lstm.to('cuda:0')
+        self.fc = nn.Linear(n_seq * hidden_dim, 2).to('cuda:1')
+        #self.fc = self.fc.to('cuda:1')
+
+    def forward(self,x: torch.Tensor,init_states: Tuple[torch.Tensor, torch.Tensor],):
+        # x: (batch_size, n_seq, seq_len)
+        # init_states：
+        #   h_0: (batch_size, hidden_dim)
+        #   c_0: (batch_size, hidden_dim)
+        x = x.permute(1, 0, 2)
+        # x: (n_seq, batch_size, seq_len)
+        #x=x.to('cuda:0')
+        init_states = (init_states[0].to('cuda:0'), init_states[1].to('cuda:0'))
+        x, _ = self.lstm(x.to('cuda:0'), init_states)
+        # x: (n_seq, batch_size, hidden_dim)
+        x = x.permute(1, 0, 2)
+        # x: (batch_size, n_seq, hidden_dim)
+        x = x.reshape(x.size(0), -1)    # 将张量 x 的形状重新调整为 (batch_size, new_dim)
+        # x: (batch_size, n_seq * hidden_dim)
+        #x=x.to('cuda:1')
+        x = self.fc(x.to('cuda:1'))
+        # x: (batch_size, 2)
+        return x
 
 class SimpleModel2(nn.Module):
     def __init__(self, n_seq: int, seq_len:int, hidden_dim: int):
